@@ -38,7 +38,13 @@ class AuditController extends Controller
      */
     protected function getAuditReader()
     {
-        return $this->get('simplethings_entityaudit.reader');
+        $connection = $this->get('request')->query->get('connection');
+        $connections = $this->get('service_container')->getParameter('simplethings.entityaudit.connections');
+        if (!$connection || !in_array($connection, $connections)) {
+            $connection = current($connections);
+        }
+
+        return $this->get('simplethings_entityaudit.reader.'.$connection);
     }
 
     /**
