@@ -32,6 +32,7 @@ class AuditConfiguration
     private $revisionTableName = 'revisions';
     private $revisionSequenceName = 'revisions_id_seq';
     private $auditedEntityClasses = array();
+    private $globalIgnoreColumns = array();
     private $currentUsername = '';
     private $revisionIdFieldType = 'integer';
 
@@ -100,16 +101,26 @@ class AuditConfiguration
         $this->auditedEntityClasses = $classes;
     }
 
+    public function getGlobalIgnoreColumns()
+    {
+        return $this->globalIgnoreColumns;
+    }
+
+    public function setGlobalIgnoreColumns(array $columns)
+    {
+        $this->globalIgnoreColumns = $columns;
+    }
+
     public function createMetadataFactory()
     {
         return new Metadata\MetadataFactory($this->auditedEntityClasses);
     }
-    
+
     public function setCurrentUsername($username)
     {
         $this->currentUsername = $username;
     }
-    
+
     public function getCurrentUsername()
     {
         return $this->currentUsername;
