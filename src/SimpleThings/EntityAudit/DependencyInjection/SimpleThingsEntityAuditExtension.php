@@ -47,7 +47,7 @@ class SimpleThingsEntityAuditExtension extends Extension
                 ->setFactoryMethod('createAuditReader')
             ;
 
-            $container->setDefinition('simplethings_entityaudit.log_revifions_listener.'.$connection,
+            $container->setDefinition('simplethings_entityaudit.log_revisions_listener.'.$connection,
                 new Definition('SimpleThings\EntityAudit\EventListener\LogRevisionsListener', array(new Reference('simplethings_entityaudit.manager'))))
                 ->addTag('doctrine.event_subscriber', array('connection' => $connection))
             ;
