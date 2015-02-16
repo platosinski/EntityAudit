@@ -30,7 +30,6 @@ class AuditConfiguration
     private $revisionFieldName = 'rev';
     private $revisionTypeFieldName = 'revtype';
     private $revisionTableName = 'revisions';
-    private $revisionSequenceName = 'revisions_id_seq';
     private $auditedEntityClasses = array();
     private $globalIgnoreColumns = array();
     private $currentUsername = '';
@@ -84,16 +83,6 @@ class AuditConfiguration
     public function setRevisionTableName($revisionTableName)
     {
         $this->revisionTableName = $revisionTableName;
-    }
-
-    public function getRevisionSequenceName()
-    {
-        return $this->revisionSequenceName;
-    }
-
-    public function setRevisionSequenceName($revisionSequenceName)
-    {
-        $this->revisionSequenceName = $revisionSequenceName;
     }
 
     public function setAuditedEntityClasses(array $classes)
