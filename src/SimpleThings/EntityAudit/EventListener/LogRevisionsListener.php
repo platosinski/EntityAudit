@@ -302,7 +302,10 @@ class LogRevisionsListener implements EventSubscriber
     {
         if (!isset($this->insertRevisionSQL[$class->name])) {
             $placeholders = array('?', '?');
-            $tableName    = $this->config->getTablePrefix() . $class->table['name'] . $this->config->getTableSuffix();
+            $tableName    = $this->config->getTablePrefix() . $class->getTableName() . $this->config->getTableSuffix();
+            if ($class->getSchemaName()) {
+                $tableName = $class->getSchemaName() . '.' . $tableName;
+            }
 
             $sql = "INSERT INTO " . $tableName . " (" .
                     $this->config->getRevisionFieldName() . ", " . $this->config->getRevisionTypeFieldName();
