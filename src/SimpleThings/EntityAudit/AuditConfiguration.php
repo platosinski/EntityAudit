@@ -23,7 +23,7 @@
 
 namespace SimpleThings\EntityAudit;
 
-use Doctrine\ORM\Mapping\ClassMetadataInfo;
+use Doctrine\DBAL\Platforms\AbstractPlatform;
 
 class AuditConfiguration
 {
@@ -38,19 +38,12 @@ class AuditConfiguration
     private $revisionIdFieldType = 'integer';
 
     /**
-     * @param ClassMetadataInfo $metadata
+     * @param string $tableName
      *
      * @return string
      */
-    public function getTableName(ClassMetadataInfo $metadata)
+    public function getTableName($tableName)
     {
-        $tableName = $metadata->getTableName();
-
-        //## Fix for doctrine/orm >= 2.5
-        if (method_exists($metadata, 'getSchemaName') && $metadata->getSchemaName()) {
-            $tableName = $metadata->getSchemaName() . '.' . $tableName;
-        }
-
         return $this->getTablePrefix() . $tableName . $this->getTableSuffix();
     }
 
@@ -94,8 +87,12 @@ class AuditConfiguration
         $this->revisionTypeFieldName = $revisionTypeFieldName;
     }
 
-    public function getRevisionTableName()
+    public function getRevisionTableName(AbstractPlatform $platform = null)
     {
+        if ($platform && !$platform->supportsSchemas() && $platform->canEmulateSchemas()) {
+            return str_replace('.', '__', $this->revisionTableName);
+        }
+
         return $this->revisionTableName;
     }
 

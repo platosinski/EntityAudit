@@ -187,6 +187,17 @@ class AuditReader
     }
 
     /**
+     * @param ClassMetadataInfo $class
+     * @return string
+     */
+    public function getTableName(ClassMetadataInfo $class)
+    {
+        $quoteStrategy = $this->em->getConfiguration()->getQuoteStrategy();
+
+        return $this->config->getTableName($quoteStrategy->getTableName($class, $this->platform));
+    }
+
+    /**
      * Find a class at the specific revision.
      *
      * This method does not require the revision to be exact but it also searches for an earlier revision
@@ -214,7 +225,7 @@ class AuditReader
 
         /** @var ClassMetadataInfo|ClassMetadata $class */
         $class = $this->em->getClassMetadata($className);
-        $tableName = $this->config->getTableName($class);
+        $tableName = $this->getTableName($class);
 
         if (!is_array($id)) {
             $id = array($class->identifier[0] => $id);
@@ -275,7 +286,7 @@ class AuditReader
         if ($class->isInheritanceTypeJoined() && $class->name != $class->rootEntityName) {
             /** @var ClassMetadataInfo|ClassMetadata $rootClass */
             $rootClass = $this->em->getClassMetadata($class->rootEntityName);
-            $rootTableName = $this->config->getTableName($rootClass);
+            $rootTableName = $this->getTableName($rootClass);
             $joinSql = "INNER JOIN {$rootTableName} re ON";
             $joinSql .= " re.rev = e.rev";
             foreach ($class->getIdentifierColumnNames() as $name) {
@@ -503,7 +514,7 @@ class AuditReader
     public function findRevisionHistory($limit = 20, $offset = 0)
     {
         $query = $this->platform->modifyLimitQuery(
-            "SELECT * FROM " . $this->config->getRevisionTableName() . " ORDER BY id DESC", $limit, $offset
+            "SELECT * FROM " . $this->config->getRevisionTableName($this->platform) . " ORDER BY id DESC", $limit, $offset
         );
         $revisionsData = $this->em->getConnection()->fetchAll($query);
 
@@ -546,7 +557,7 @@ class AuditReader
                 continue;
             }
 
-            $tableName = $this->config->getTableName($class);
+            $tableName = $this->getTableName($class);
             $params = array();
 
             $whereSQL   = "e." . $this->config->getRevisionFieldName() ." = ?";
@@ -583,7 +594,7 @@ class AuditReader
 
                 /** @var ClassMetadataInfo|ClassMetadata $rootClass */
                 $rootClass = $this->em->getClassMetadata($class->rootEntityName);
-                $rootTableName = $this->config->getTableName($rootClass);
+                $rootTableName = $this->getTableName($rootClass);
 
                 $joinSql = "INNER JOIN {$rootTableName} re ON";
                 $joinSql .= " re.rev = e.rev";
@@ -623,7 +634,7 @@ class AuditReader
      */
     public function findRevision($rev)
     {
-        $query = "SELECT * FROM " . $this->config->getRevisionTableName() . " r WHERE r.id = ?";
+        $query = "SELECT * FROM " . $this->config->getRevisionTableName($this->platform) . " r WHERE r.id = ?";
         $revisionsData = $this->em->getConnection()->fetchAll($query, array($rev));
 
         if (count($revisionsData) == 1) {
@@ -653,7 +664,7 @@ class AuditReader
 
         /** @var ClassMetadataInfo|ClassMetadata $class */
         $class = $this->em->getClassMetadata($className);
-        $tableName = $this->config->getTableName($class);
+        $tableName = $this->getTableName($class);
 
         if (!is_array($id)) {
             $id = array($class->identifier[0] => $id);
@@ -674,7 +685,7 @@ class AuditReader
             }
         }
 
-        $query = "SELECT r.* FROM " . $this->config->getRevisionTableName() . " r " .
+        $query = "SELECT r.* FROM " . $this->config->getRevisionTableName($this->platform) . " r " .
                  "INNER JOIN " . $tableName . " e ON r.id = e." . $this->config->getRevisionFieldName() . " WHERE " . $whereSQL . " ORDER BY r.id DESC";
         $revisionsData = $this->em->getConnection()->fetchAll($query, array_values($id));
 
@@ -706,7 +717,7 @@ class AuditReader
 
         /** @var ClassMetadataInfo|ClassMetadata $class */
         $class = $this->em->getClassMetadata($className);
-        $tableName = $this->config->getTableName($class);
+        $tableName = $this->getTableName($class);
 
         if (!is_array($id)) {
             $id = array($class->identifier[0] => $id);
@@ -791,7 +802,7 @@ class AuditReader
 
         /** @var ClassMetadataInfo|ClassMetadata $class */
         $class = $this->em->getClassMetadata($className);
-        $tableName = $this->config->getTableName($class);
+        $tableName = $this->getTableName($class);
 
         if (!is_array($id)) {
             $id = array($class->identifier[0] => $id);

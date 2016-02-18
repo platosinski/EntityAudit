@@ -70,10 +70,10 @@ class CoreTest extends BaseTest
         $this->em->persist($cat);
         $this->em->flush();
 
-        $this->assertEquals(1, count($this->em->getConnection()->fetchAll('SELECT id FROM revisions')));
-        $this->assertEquals(1, count($this->em->getConnection()->fetchAll('SELECT * FROM UserAudit_audit')));
-        $this->assertEquals(1, count($this->em->getConnection()->fetchAll('SELECT * FROM ArticleAudit_audit')));
-        $this->assertEquals(2, count($this->em->getConnection()->fetchAll('SELECT * FROM AnimalAudit_audit')));
+        $this->assertEquals(1, count($this->em->getConnection()->fetchAll('SELECT id FROM '.$this->getTableName('schema.revisions'))));
+        $this->assertEquals(1, count($this->em->getConnection()->fetchAll('SELECT * FROM '.$this->getTableName('UserAudit_audit'))));
+        $this->assertEquals(1, count($this->em->getConnection()->fetchAll('SELECT * FROM '.$this->getTableName('schema.ArticleAudit_audit'))));
+        $this->assertEquals(2, count($this->em->getConnection()->fetchAll('SELECT * FROM '.$this->getTableName('schema.AnimalAudit_audit'))));
 
         $article->setText("oeruoa");
         $rabbit->setName('Rabbit');
@@ -83,9 +83,9 @@ class CoreTest extends BaseTest
 
         $this->em->flush();
 
-        $this->assertEquals(2, count($this->em->getConnection()->fetchAll('SELECT id FROM revisions')));
-        $this->assertEquals(2, count($this->em->getConnection()->fetchAll('SELECT * FROM ArticleAudit_audit')));
-        $this->assertEquals(4, count($this->em->getConnection()->fetchAll('SELECT * FROM AnimalAudit_audit')));
+        $this->assertEquals(2, count($this->em->getConnection()->fetchAll('SELECT id FROM '.$this->getTableName('schema.revisions'))));
+        $this->assertEquals(2, count($this->em->getConnection()->fetchAll('SELECT * FROM '.$this->getTableName('schema.ArticleAudit_audit'))));
+        $this->assertEquals(4, count($this->em->getConnection()->fetchAll('SELECT * FROM '.$this->getTableName('schema.AnimalAudit_audit'))));
 
         $this->em->remove($user);
         $this->em->remove($article);
@@ -93,10 +93,10 @@ class CoreTest extends BaseTest
         $this->em->remove($foxy);
         $this->em->flush();
 
-        $this->assertEquals(3, count($this->em->getConnection()->fetchAll('SELECT id FROM revisions')));
-        $this->assertEquals(2, count($this->em->getConnection()->fetchAll('SELECT * FROM UserAudit_audit')));
-        $this->assertEquals(3, count($this->em->getConnection()->fetchAll('SELECT * FROM ArticleAudit_audit')));
-        $this->assertEquals(6, count($this->em->getConnection()->fetchAll('SELECT * FROM AnimalAudit_audit')));
+        $this->assertEquals(3, count($this->em->getConnection()->fetchAll('SELECT id FROM '.$this->getTableName('schema.revisions'))));
+        $this->assertEquals(2, count($this->em->getConnection()->fetchAll('SELECT * FROM '.$this->getTableName('UserAudit_audit'))));
+        $this->assertEquals(3, count($this->em->getConnection()->fetchAll('SELECT * FROM '.$this->getTableName('schema.ArticleAudit_audit'))));
+        $this->assertEquals(6, count($this->em->getConnection()->fetchAll('SELECT * FROM '.$this->getTableName('schema.AnimalAudit_audit'))));
     }
 
     public function testFind()

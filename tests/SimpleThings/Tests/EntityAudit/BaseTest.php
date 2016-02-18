@@ -78,6 +78,7 @@ abstract class BaseTest extends \PHPUnit_Framework_TestCase
         $auditConfig->setCurrentUsername("beberlei");
         $auditConfig->setAuditedEntityClasses($this->auditedEntities);
         $auditConfig->setGlobalIgnoreColumns(array('ignoreme'));
+        $auditConfig->setRevisionTableName('schema.revisions');
 
         $this->auditManager = new AuditManager($auditConfig);
         $this->auditManager->registerEvents($evm = new EventManager());
@@ -123,5 +124,14 @@ abstract class BaseTest extends \PHPUnit_Framework_TestCase
                 throw $e;
             }
         }
+    }
+
+    protected function getTableName($tableName)
+    {
+        if ($GLOBALS['DOCTRINE_DRIVER'] == 'pdo_sqlite') {
+            return str_replace('.', '__', $tableName);
+        }
+
+        return $tableName;
     }
 }

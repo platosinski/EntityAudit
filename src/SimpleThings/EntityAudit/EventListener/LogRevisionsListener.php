@@ -32,8 +32,6 @@ use Doctrine\ORM\Events;
 use Doctrine\ORM\Mapping\ClassMetadata;
 use Doctrine\ORM\Persisters\Entity\BasicEntityPersister;
 use Doctrine\ORM\Persisters\Entity\EntityPersister;
-use Doctrine\ORM\Persisters\Entity\JoinedSubclassPersister;
-use Doctrine\ORM\Utility\PersisterHelper;
 use SimpleThings\EntityAudit\AuditManager;
 
 class LogRevisionsListener implements EventSubscriber
@@ -98,6 +96,7 @@ class LogRevisionsListener implements EventSubscriber
     {
         $em = $eventArgs->getEntityManager();
         $uow = $em->getUnitOfWork();
+        $quoteStrategy = $em->getConfiguration()->getQuoteStrategy();
 
         foreach ($this->extraUpdates as $entity) {
             $className = get_class($entity);
@@ -111,7 +110,7 @@ class LogRevisionsListener implements EventSubscriber
             }
 
             foreach ($updateData[$meta->table['name']] as $field => $value) {
-                $sql = 'UPDATE ' . $this->config->getTableName($meta) . ' ' .
+                $sql = 'UPDATE ' . $this->config->getTableName($quoteStrategy->getTableName($meta, $this->platform)) . ' ' .
                     'SET ' . $field . ' = ? ' .
                     'WHERE ' . $this->config->getRevisionFieldName() . ' = ? ';
 
@@ -273,7 +272,7 @@ class LogRevisionsListener implements EventSubscriber
     {
         if ($this->revisionId === null) {
             $this->conn->insert(
-                $this->config->getRevisionTableName(),
+                $this->config->getRevisionTableName($this->platform),
                 array(
                     'timestamp' => date_create('now'),
                     'username' => $this->config->getCurrentUsername(),
@@ -285,7 +284,7 @@ class LogRevisionsListener implements EventSubscriber
             );
 
             $sequenceName = $this->platform->supportsSequences()
-                ? $this->platform->getIdentitySequenceName($this->config->getRevisionTableName(), 'id')
+                ? $this->platform->getIdentitySequenceName($this->config->getRevisionTableName($this->platform), 'id')
                 : null;
 
             $this->revisionId = $this->conn->lastInsertId($sequenceName);
@@ -304,7 +303,8 @@ class LogRevisionsListener implements EventSubscriber
     {
         if (! isset($this->insertRevisionSQL[$class->name])) {
             $placeholders = array('?', '?');
-            $tableName = $this->config->getTableName($class);
+            $quoteStrategy = $this->em->getConfiguration()->getQuoteStrategy();
+            $tableName = $this->config->getTableName($quoteStrategy->getTableName($class, $this->platform));
 
             $sql = "INSERT INTO " . $tableName . " (" .
                 $this->config->getRevisionFieldName() . ", " . $this->config->getRevisionTypeFieldName();

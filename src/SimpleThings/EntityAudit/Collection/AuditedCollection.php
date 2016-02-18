@@ -450,7 +450,7 @@ class AuditedCollection implements Collection
             if (isset($this->associationDefinition['indexBy'])) {
                 $sql .= ', '.$this->associationDefinition['indexBy'].' ';
             }
-            $sql .= 'FROM ' . $this->configuration->getTableName($this->metadata) . ' t ';
+            $sql .= 'FROM ' . $this->auditReader->getTableName($this->metadata) . ' t ';
             $sql .= 'WHERE ' . $this->configuration->getRevisionFieldName() . ' <= ' . $this->revision . ' ';
 
             foreach ($this->foreignKeys as $column => $value) {
@@ -459,7 +459,7 @@ class AuditedCollection implements Collection
             }
 
             //we check for revisions greater than current belonging to other entities
-            $sql .= 'AND NOT EXISTS (SELECT * FROM '. $this->configuration->getTableName($this->metadata) . ' st WHERE';
+            $sql .= 'AND NOT EXISTS (SELECT * FROM '. $this->auditReader->getTableName($this->metadata) . ' st WHERE';
 
             //ids
             foreach ($this->metadata->getIdentifierColumnNames() as $name) {
@@ -487,7 +487,7 @@ class AuditedCollection implements Collection
             //end of check for for belonging to other entities
 
             //check for deleted revisions older than requested
-            $sql .= 'AND NOT EXISTS (SELECT * FROM ' . $this->configuration->getTableName($this->metadata) . ' sd WHERE';
+            $sql .= 'AND NOT EXISTS (SELECT * FROM ' . $this->auditReader->getTableName($this->metadata) . ' sd WHERE';
 
             //ids
             foreach ($this->metadata->getIdentifierColumnNames() as $name) {
