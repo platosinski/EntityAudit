@@ -25,7 +25,9 @@ namespace SimpleThings\EntityAudit\DependencyInjection;
 
 use Symfony\Component\Config\FileLocator;
 use Symfony\Component\DependencyInjection\ContainerBuilder;
+use Symfony\Component\DependencyInjection\Definition;
 use Symfony\Component\DependencyInjection\Loader\XmlFileLoader;
+use Symfony\Component\DependencyInjection\Reference;
 use Symfony\Component\HttpKernel\DependencyInjection\Extension;
 
 class SimpleThingsEntityAuditExtension extends Extension
@@ -40,8 +42,7 @@ class SimpleThingsEntityAuditExtension extends Extension
         foreach ($config['connections'] as $connection) {
             $container->setDefinition('simplethings_entityaudit.reader.'.$connection,
                 new Definition('SimpleThings\EntityAudit\AuditReader', array(new Reference('doctrine.orm.'.$connection.'_entity_manager'))))
-                ->setFactoryService('simplethings_entityaudit.manager')
-                ->setFactoryMethod('createAuditReader')
+                ->setFactory(array('simplethings_entityaudit.manager', 'createAuditReader'))
             ;
 
             $container->setDefinition('simplethings_entityaudit.log_revisions_listener.'.$connection,
