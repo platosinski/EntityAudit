@@ -148,12 +148,17 @@ class LogRevisionsListener implements EventSubscriber
                     if (isset($meta->fieldMappings[$idField])) {
                         $columnName = $meta->fieldMappings[$idField]['columnName'];
                         $types[] = $meta->fieldMappings[$idField]['type'];
+                        $params[] = $meta->reflFields[$idField]->getValue($entity);
                     } elseif (isset($meta->associationMappings[$idField])) {
-                        $columnName = $meta->associationMappings[$idField]['joinColumns'][0];
+                        $columnName = $meta->associationMappings[$idField]['joinColumns'][0]['name'];
                         $types[] = $meta->associationMappings[$idField]['type'];
-                    }
 
-                    $params[] = $meta->reflFields[$idField]->getValue($entity);
+                        $targetMeta = $em->getClassMetadata($meta->associationMappings[$idField]['targetEntity']);
+                        $referencedColumnName = $meta->associationMappings[$idField]['joinColumns'][0]['referencedColumnName'];
+                        $targetEntity = $meta->reflFields[$idField]->getValue($entity);
+
+                        $params[] = $targetMeta->reflFields[$referencedColumnName]->getValue($targetEntity);
+                    }
 
                     $sql .= 'AND ' . $columnName . ' = ?';
                 }

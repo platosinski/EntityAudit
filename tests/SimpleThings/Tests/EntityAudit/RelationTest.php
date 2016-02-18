@@ -45,7 +45,9 @@ class RelationTest extends BaseTest
         'SimpleThings\EntityAudit\Tests\PageLocalization',
         'SimpleThings\EntityAudit\Tests\RelationOneToOneEntity',
         'SimpleThings\EntityAudit\Tests\RelationFoobarEntity',
-        'SimpleThings\EntityAudit\Tests\RelationReferencedEntity'
+        'SimpleThings\EntityAudit\Tests\RelationReferencedEntity',
+        'SimpleThings\EntityAudit\Tests\BaseUser',
+        'SimpleThings\EntityAudit\Tests\ExtendedUser'
     );
 
     protected $auditedEntities = array(
@@ -62,7 +64,9 @@ class RelationTest extends BaseTest
         'SimpleThings\EntityAudit\Tests\PageLocalization',
         'SimpleThings\EntityAudit\Tests\RelationOneToOneEntity',
         'SimpleThings\EntityAudit\Tests\RelationFoobarEntity',
-        'SimpleThings\EntityAudit\Tests\RelationReferencedEntity'
+        'SimpleThings\EntityAudit\Tests\RelationReferencedEntity',
+        'SimpleThings\EntityAudit\Tests\BaseUser',
+        'SimpleThings\EntityAudit\Tests\ExtendedUser'
     );
 
     public function testUndefinedIndexesInUOWForRelations()
@@ -191,9 +195,21 @@ class RelationTest extends BaseTest
 
         $this->em->flush(); //#5
 
+        $master->setAudited(null);
         $this->em->remove($audited);
 
         $this->em->flush(); //#6
+
+        $master121 = new BaseUser();
+
+        $this->em->persist($master121);
+        $this->em->flush(); //#7
+
+        $slave121 = new ExtendedUser();
+        $slave121->setBaseUser($master121);
+
+        $this->em->persist($slave121);
+        $this->em->flush(); //#8
 
         $audited = $auditReader->find(get_class($master), $master->getId(), 1);
         $this->assertEquals('master#1', $audited->getTitle());
@@ -1327,4 +1343,50 @@ class PageLocalization
 class UnManagedIndexByOwner
 {
 
+}
+
+/**
+ * Class BaseUser
+ * @package SimpleThings\EntityAudit\Tests
+ * @ORM\Entity
+ */
+class BaseUser
+{
+    /** @ORM\Id @ORM\Column(type="integer") @ORM\GeneratedValue(strategy="AUTO") */
+    protected $id;
+
+    public function getId()
+    {
+        return $this->id;
+    }
+}
+
+/**
+ * Class ExtendedUser
+ * @package SimpleThings\EntityAudit\Tests
+ * @ORM\Entity
+ */
+class ExtendedUser
+{
+    /** @ORM\Id @ORM\OneToOne(targetEntity="BaseUser") */
+    protected $baseUser;
+
+    /**
+     * @return BaseUser
+     */
+    public function getBaseUser()
+    {
+        return $this->baseUser;
+    }
+
+    /**
+     * @param BaseUser $baseUser
+     * @return $this
+     */
+    public function setBaseUser($baseUser)
+    {
+        $this->baseUser = $baseUser;
+
+        return $this;
+    }
 }
