@@ -42,7 +42,7 @@ class SimpleThingsEntityAuditExtension extends Extension
         foreach ($config['connections'] as $connection) {
             $container->setDefinition('simplethings_entityaudit.reader.'.$connection,
                 new Definition('SimpleThings\EntityAudit\AuditReader', array(new Reference('doctrine.orm.'.$connection.'_entity_manager'))))
-                ->setFactory(array('simplethings_entityaudit.manager', 'createAuditReader'))
+                ->setFactory(array(new Reference('simplethings_entityaudit.manager'), 'createAuditReader'))
             ;
 
             $container->setDefinition('simplethings_entityaudit.log_revisions_listener.'.$connection,
