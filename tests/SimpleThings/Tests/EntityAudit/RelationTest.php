@@ -47,7 +47,8 @@ class RelationTest extends BaseTest
         'SimpleThings\EntityAudit\Tests\RelationFoobarEntity',
         'SimpleThings\EntityAudit\Tests\RelationReferencedEntity',
         'SimpleThings\EntityAudit\Tests\BaseUser',
-        'SimpleThings\EntityAudit\Tests\ExtendedUser'
+        'SimpleThings\EntityAudit\Tests\ExtendedUser',
+        'SimpleThings\EntityAudit\Tests\ExtendedUser2'
     );
 
     protected $auditedEntities = array(
@@ -66,7 +67,8 @@ class RelationTest extends BaseTest
         'SimpleThings\EntityAudit\Tests\RelationFoobarEntity',
         'SimpleThings\EntityAudit\Tests\RelationReferencedEntity',
         'SimpleThings\EntityAudit\Tests\BaseUser',
-        'SimpleThings\EntityAudit\Tests\ExtendedUser'
+        'SimpleThings\EntityAudit\Tests\ExtendedUser',
+        'SimpleThings\EntityAudit\Tests\ExtendedUser2'
     );
 
     public function testUndefinedIndexesInUOWForRelations()
@@ -200,17 +202,6 @@ class RelationTest extends BaseTest
 
         $this->em->flush(); //#6
 
-        $master121 = new BaseUser();
-
-        $this->em->persist($master121);
-        $this->em->flush(); //#7
-
-        $slave121 = new ExtendedUser();
-        $slave121->setBaseUser($master121);
-
-        $this->em->persist($slave121);
-        $this->em->flush(); //#8
-
         $audited = $auditReader->find(get_class($master), $master->getId(), 1);
         $this->assertEquals('master#1', $audited->getTitle());
         $this->assertEquals(null, $audited->getAudited());
@@ -255,6 +246,82 @@ class RelationTest extends BaseTest
         $this->assertEquals('changed#5', $audited->getTitle());
         $this->assertEquals(null, $audited->getAudited());
         $this->assertEquals('notaudited', $audited->getNotAudited()->getTitle());
+    }
+
+    public function testOneToOneAssocBaseLast()
+    {
+        $baseUser = new BaseUser();
+
+        $this->em->persist($baseUser);
+        $this->em->flush(); //#1
+
+        $extendedUser = new ExtendedUser();
+        $extendedUser->setBaseUser($baseUser);
+
+        $this->em->persist($extendedUser);
+        $this->em->flush(); //#2
+
+        $this->em->remove($extendedUser);
+        $this->em->flush(); //#3
+
+        $this->em->remove($extendedUser->getBaseUser());
+        $this->em->flush(); //#4
+    }
+
+    public function testOneToOneAssocBaseFirst()
+    {
+        $baseUser2 = new BaseUser();
+
+        $this->em->persist($baseUser2);
+        $this->em->flush(); //#1
+
+        $extendedUser2 = new ExtendedUser();
+        $extendedUser2->setBaseUser($baseUser2);
+
+        $this->em->persist($extendedUser2);
+        $this->em->flush(); //#2
+
+        $this->em->remove($extendedUser2->getBaseUser());
+        $this->em->flush(); //#3
+
+        $this->em->remove($extendedUser2);
+        $this->em->flush(); //#4
+    }
+
+    public function testOneToOneBiAssocBaseLast()
+    {
+        $baseUser3 = new BaseUser();
+
+        $this->em->persist($baseUser3);
+        $this->em->flush(); //#1
+
+        $extendedUser3 = new ExtendedUser2();
+        $baseUser3->setExtendedUser2($extendedUser3);
+
+        $this->em->flush(); //#2
+
+        $baseUser3->setExtendedUser2(null);
+        $this->em->remove($extendedUser3);
+        $this->em->flush(); //#3
+
+        $this->em->remove($baseUser3);
+        $this->em->flush(); //#4
+    }
+
+    public function testOneToOneBiAssocBaseFirstCascade()
+    {
+        $baseUser4 = new BaseUser();
+
+        $this->em->persist($baseUser4);
+        $this->em->flush(); //#1
+
+        $extendedUser4 = new ExtendedUser2();
+        $baseUser4->setExtendedUser2($extendedUser4);
+
+        $this->em->flush(); //#2
+
+        $this->em->remove($baseUser4);
+        $this->em->flush(); //#3
     }
 
     /**
@@ -1355,9 +1422,43 @@ class BaseUser
     /** @ORM\Id @ORM\Column(type="integer") @ORM\GeneratedValue(strategy="AUTO") */
     protected $id;
 
+    /**
+     * @var ExtendedUser2
+     * @ORM\OneToOne(targetEntity="ExtendedUser2", mappedBy="baseUser", cascade={"all"})
+     */
+    protected $extendedUser2;
+
+    /**
+     * @return mixed
+     */
     public function getId()
     {
         return $this->id;
+    }
+
+    /**
+     * @return ExtendedUser2
+     */
+    public function getExtendedUser2()
+    {
+        return $this->extendedUser2;
+    }
+
+    /**
+     * @param ExtendedUser2 $extendedUser2
+     * @return $this
+     */
+    public function setExtendedUser2($extendedUser2)
+    {
+        if ($this->extendedUser2) {
+            $this->extendedUser2->setBaseUser(null);
+        }
+        if ($extendedUser2) {
+            $extendedUser2->setBaseUser($this);
+        }
+        $this->extendedUser2 = $extendedUser2;
+
+        return $this;
     }
 }
 
@@ -1368,7 +1469,37 @@ class BaseUser
  */
 class ExtendedUser
 {
-    /** @ORM\Id @ORM\OneToOne(targetEntity="BaseUser") */
+    /** @ORM\Id @ORM\OneToOne(targetEntity="BaseUser")
+     * @ORM\JoinColumns({@ORM\JoinColumn(onDelete="CASCADE")}) */
+    protected $baseUser;
+
+    /**
+     * @return BaseUser
+     */
+    public function getBaseUser()
+    {
+        return $this->baseUser;
+    }
+
+    /**
+     * @param BaseUser $baseUser
+     * @return $this
+     */
+    public function setBaseUser($baseUser)
+    {
+        $this->baseUser = $baseUser;
+
+        return $this;
+    }
+}
+/**
+ * Class ExtendedUser2
+ * @package SimpleThings\EntityAudit\Tests
+ * @ORM\Entity
+ */
+class ExtendedUser2
+{
+    /** @ORM\Id @ORM\OneToOne(targetEntity="BaseUser", inversedBy="extendedUser2") */
     protected $baseUser;
 
     /**

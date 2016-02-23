@@ -233,7 +233,7 @@ class LogRevisionsListener implements EventSubscriber
                 continue;
             }
 
-            $entityData = array_merge($this->getOriginalEntityData($entity), $this->uow->getEntityIdentifier($entity));
+            $entityData = array_merge($this->uow->getEntityIdentifier($entity), $this->getOriginalEntityData($entity));
             $this->saveRevisionEntityData($class, $entityData, 'DEL');
         }
 
