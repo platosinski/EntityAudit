@@ -237,7 +237,7 @@ class AuditReader
             if (isset($class->fieldMappings[$idField])) {
                 $columnName = $class->fieldMappings[$idField]['columnName'];
             } elseif (isset($class->associationMappings[$idField])) {
-                $columnName = $class->associationMappings[$idField]['joinColumns'][0];
+                $columnName = $class->associationMappings[$idField]['joinColumns'][0]['name'];
             } else {
                 throw new \RuntimeException('column name not found  for' . $idField);
             }
@@ -346,8 +346,12 @@ class AuditReader
         //lookup revisioned entity cache
         $keyParts = array();
 
-        foreach($class->getIdentifierFieldNames() as $name) {
-            $keyParts[] = $data[$name];
+        foreach ($class->getIdentifierFieldNames() as $name) {
+            if (!isset($class->associationMappings[$name])) {
+                $keyParts[] = $data[$name];
+            } else {
+                $keyParts[] = $data[$class->associationMappings[$name]['joinColumns'][0]['name']];
+            }
         }
 
         $key = implode(':', $keyParts);
@@ -610,7 +614,11 @@ class AuditReader
                 $id   = array();
 
                 foreach ($class->identifier AS $idField) {
-                    $id[$idField] = $row[$idField];
+                    if (!isset($class->associationMappings[$idField])) {
+                        $id[$idField] = $row[$idField];
+                    } else {
+                        $id[$idField] = $row[$class->associationMappings[$idField]['joinColumns'][0]['name']];
+                    }
                 }
 
                 $entity = $this->createEntity($className, $row, $revision);

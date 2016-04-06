@@ -266,6 +266,13 @@ class RelationTest extends BaseTest
 
         $this->em->remove($extendedUser->getBaseUser());
         $this->em->flush(); //#4
+
+        $auditReader = $this->auditManager->createAuditReader($this->em);
+
+        $changed = $auditReader->findEntitiesChangedAtRevision(1);
+        $changed = $auditReader->findEntitiesChangedAtRevision(2);
+        $changed = $auditReader->findEntitiesChangedAtRevision(3);
+        $changed = $auditReader->findEntitiesChangedAtRevision(4);
     }
 
     public function testOneToOneAssocBaseFirst()
@@ -286,6 +293,13 @@ class RelationTest extends BaseTest
 
         $this->em->remove($extendedUser2);
         $this->em->flush(); //#4
+
+        $auditReader = $this->auditManager->createAuditReader($this->em);
+
+        $changed = $auditReader->findEntitiesChangedAtRevision(1);
+        $changed = $auditReader->findEntitiesChangedAtRevision(2);
+        $changed = $auditReader->findEntitiesChangedAtRevision(3);
+        $changed = $auditReader->findEntitiesChangedAtRevision(4);
     }
 
     public function testOneToOneBiAssocBaseLast()
@@ -306,6 +320,13 @@ class RelationTest extends BaseTest
 
         $this->em->remove($baseUser3);
         $this->em->flush(); //#4
+
+        $auditReader = $this->auditManager->createAuditReader($this->em);
+
+        $changed = $auditReader->findEntitiesChangedAtRevision(1);
+        $changed = $auditReader->findEntitiesChangedAtRevision(2);
+        $changed = $auditReader->findEntitiesChangedAtRevision(3);
+        $changed = $auditReader->findEntitiesChangedAtRevision(4);
     }
 
     public function testOneToOneBiAssocBaseFirstCascade()
@@ -322,6 +343,12 @@ class RelationTest extends BaseTest
 
         $this->em->remove($baseUser4);
         $this->em->flush(); //#3
+
+        $auditReader = $this->auditManager->createAuditReader($this->em);
+
+        $changed = $auditReader->findEntitiesChangedAtRevision(1);
+        $changed = $auditReader->findEntitiesChangedAtRevision(2);
+        $changed = $auditReader->findEntitiesChangedAtRevision(3);
     }
 
     /**
