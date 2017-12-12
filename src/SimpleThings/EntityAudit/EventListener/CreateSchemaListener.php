@@ -97,6 +97,8 @@ class CreateSchemaListener implements EventSubscriber
         $pkColumns = $entityTable->getPrimaryKey()->getColumns();
         $pkColumns[] = $this->config->getRevisionFieldName();
         $revisionTable->setPrimaryKey($pkColumns);
+        $revIndexName = $this->config->getRevisionFieldName().'_'.md5($revisionTable->getName()).'_idx';
+        $revisionTable->addIndex(array($this->config->getRevisionFieldName()),$revIndexName);
     }
 
     public function postGenerateSchema(GenerateSchemaEventArgs $eventArgs)
@@ -107,7 +109,7 @@ class CreateSchemaListener implements EventSubscriber
             'autoincrement' => true,
         ));
         $revisionsTable->addColumn('timestamp', 'datetime');
-        $revisionsTable->addColumn('username', 'string');
+        $revisionsTable->addColumn('username', 'string')->setNotnull(false);
         $revisionsTable->setPrimaryKey(array('id'));
     }
 }

@@ -24,6 +24,7 @@
 namespace SimpleThings\EntityAudit\EventListener;
 
 use Doctrine\Common\EventSubscriber;
+use Doctrine\Common\Persistence\Mapping\MappingException;
 use Doctrine\DBAL\Types\Type;
 use Doctrine\ORM\Event\LifecycleEventArgs;
 use Doctrine\ORM\Event\OnFlushEventArgs;
@@ -62,6 +63,12 @@ class LogRevisionsListener implements EventSubscriber
     private $em;
 
     /**
+     * @var \Doctrine\ORM\Mapping\QuoteStrategy
+     */
+    private $quoteStrategy;
+
+
+    /**
      * @var array
      */
     private $insertRevisionSQL = array();
@@ -92,11 +99,18 @@ class LogRevisionsListener implements EventSubscriber
         return array(Events::onFlush, Events::postPersist, Events::postUpdate, Events::postFlush);
     }
 
+    /**
+     * @param PostFlushEventArgs $eventArgs
+     * @throws MappingException
+     * @throws \Doctrine\DBAL\DBALException
+     * @throws MappingException
+     * @throws \Exception
+     */
     public function postFlush(PostFlushEventArgs $eventArgs)
     {
         $em = $eventArgs->getEntityManager();
-        $uow = $em->getUnitOfWork();
         $quoteStrategy = $em->getConfiguration()->getQuoteStrategy();
+        $uow = $em->getUnitOfWork();
 
         foreach ($this->extraUpdates as $entity) {
             $className = get_class($entity);
@@ -109,17 +123,31 @@ class LogRevisionsListener implements EventSubscriber
                 continue;
             }
 
-            foreach ($updateData[$meta->table['name']] as $field => $value) {
+            foreach ($updateData[$meta->table['name']] as $column => $value) {
+                $field = $meta->getFieldName($column);
+                $fieldName = $meta->getFieldForColumn($column);
+                $placeholder = '?';
+                if ($meta->hasField($fieldName)) {
+                    $field = $quoteStrategy->getColumnName($field, $meta, $this->platform);
+                    $fieldType = $meta->getTypeOfField($field);
+                    if (null !== $fieldType) {
+                        $type = Type::getType($fieldType);
+                        if ($type->canRequireSQLConversion()) {
+                            $placeholder = $type->convertToDatabaseValueSQL('?', $this->platform);
+                        }
+                    }
+                }
+
                 $sql = 'UPDATE ' . $this->config->getTableName($quoteStrategy->getTableName($meta, $this->platform)) . ' ' .
-                    'SET ' . $field . ' = ? ' .
+                    'SET ' . $field . ' = ' . $placeholder . ' ' .
                     'WHERE ' . $this->config->getRevisionFieldName() . ' = ? ';
 
                 $params = array($value, $this->getRevisionId());
 
                 $types = array();
 
-                if (in_array($field, $meta->columnNames)) {
-                    $types[] = $meta->fieldMappings[$meta->getFieldForColumn($field)]['type'];
+                if (in_array($column, $meta->columnNames)) {
+                    $types[] = $meta->getTypeOfField($fieldName);
                 } else {
                     //try to find column in association mappings
                     $type = null;
@@ -127,7 +155,7 @@ class LogRevisionsListener implements EventSubscriber
                     foreach ($meta->associationMappings as $mapping) {
                         if (isset($mapping['joinColumns'])) {
                             foreach ($mapping['joinColumns'] as $definition) {
-                                if ($definition['name'] == $field) {
+                                if ($definition['name'] == $column) {
                                     $targetTable = $em->getClassMetadata($mapping['targetEntity']);
                                     $type = $targetTable->getTypeOfColumn($definition['referencedColumnName']);
                                 }
@@ -137,9 +165,11 @@ class LogRevisionsListener implements EventSubscriber
 
                     if (is_null($type)) {
                         throw new \Exception(
-                            sprintf('Could not resolve database type for column "%s" during extra updates', $field)
+                            sprintf('Could not resolve database type for column "%s" during extra updates', $column)
                         );
                     }
+
+                    $types[] = $type;
                 }
 
                 $types[] = $this->config->getRevisionIdFieldType();
@@ -150,7 +180,15 @@ class LogRevisionsListener implements EventSubscriber
                         $types[] = $meta->fieldMappings[$idField]['type'];
                         $params[] = $meta->reflFields[$idField]->getValue($entity);
                     } elseif (isset($meta->associationMappings[$idField])) {
-                        $columnName = $meta->associationMappings[$idField]['joinColumns'][0]['name'];
+                        $columnName = $meta->associationMappings[$idField]['joinColumns'][0];
+                        if (is_array($columnName)) {
+                            if (isset($columnName['name'])) {
+                                $columnName = $columnName['name'];
+                            } else {
+                                // Not much we can do to recover this - we need a column name...
+                                throw new MappingException('Column name not set within meta');
+                            }
+                        }
                         $types[] = $meta->associationMappings[$idField]['type'];
 
                         $targetMeta = $em->getClassMetadata($meta->associationMappings[$idField]['targetEntity']);
@@ -211,6 +249,7 @@ class LogRevisionsListener implements EventSubscriber
     public function onFlush(OnFlushEventArgs $eventArgs)
     {
         $this->em = $eventArgs->getEntityManager();
+        $this->quoteStrategy = $this->em->getConfiguration()->getQuoteStrategy();
         $this->conn = $this->em->getConnection();
         $this->uow = $this->em->getUnitOfWork();
         $this->platform = $this->conn->getDatabasePlatform();
@@ -346,7 +385,7 @@ class LogRevisionsListener implements EventSubscriber
                 $placeholders[] = (! empty($class->fieldMappings[$field]['requireSQLConversion']))
                     ? $type->convertToDatabaseValueSQL('?', $this->platform)
                     : '?';
-                $sql .= ', ' . $class->getQuotedColumnName($field, $this->platform);
+                $sql .= ', ' . $this->quoteStrategy->getColumnName($field, $class, $this->platform);
             }
 
             if (($class->isInheritanceTypeJoined() && $class->rootEntityName == $class->name)

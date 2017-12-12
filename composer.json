@@ -14,10 +14,12 @@
     },
     "require-dev": {
         "doctrine/doctrine-bundle": "~1.4",
-        "symfony/framework-bundle": "~2.7|~3.0",
         "gedmo/doctrine-extensions": "^2.3.1",
-        "phpunit/phpunit": "~4.8.20",
-        "symfony/var-dumper": "^2.7"
+        "matthiasnoback/symfony-dependency-injection-test": "^1.0",
+        "phpunit/phpunit": "^4.8",
+        "symfony/framework-bundle": "~2.7|~3.0",
+        "symfony/var-dumper": "^2.7",
+        "fabpot/php-cs-fixer": "^1.11"
     },
     "conflict": {
         "gedmo/doctrine-extensions": "<2.3.1",
