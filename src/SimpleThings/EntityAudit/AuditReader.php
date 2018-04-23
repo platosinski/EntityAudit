@@ -271,10 +271,9 @@ class AuditReader
 
             $type = Type::getType($class->fieldMappings[$field]['type']);
             $columnList[] = sprintf(
-                '%s.%s AS %s',
-                $tableAlias,
+                '%s AS %s',
                 $type->convertToPHPValueSQL(
-                    $this->quoteStrategy->getColumnName($field, $class, $this->platform),
+                    $tableAlias . '.' . $this->quoteStrategy->getColumnName($field, $class, $this->platform),
                     $this->platform
                 ),
                 $this->platform->quoteSingleIdentifier($field)
@@ -304,7 +303,7 @@ class AuditReader
             $rootClass = $this->em->getClassMetadata($class->rootEntityName);
             $rootTableName = $this->getTableName($rootClass);
             $joinSql = "INNER JOIN {$rootTableName} re ON";
-            $joinSql .= " re.rev = e.rev";
+            $joinSql .= " re.".$this->config->getRevisionFieldName()." = e.".$this->config->getRevisionFieldName();
             foreach ($class->getIdentifierColumnNames() as $name) {
                 $joinSql .= " AND re.$name = e.$name";
             }
@@ -328,7 +327,7 @@ class AuditReader
             }
         }
 
-        $query = "SELECT " . implode(', ', $columnList) . " FROM " . $tableName . " e " . $joinSql . " WHERE " . $whereSQL . " ORDER BY e.rev DESC";
+        $query = "SELECT " . implode(', ', $columnList) . " FROM " . $tableName . " e " . $joinSql . " WHERE " . $whereSQL . " ORDER BY e.".$this->config->getRevisionFieldName()." DESC";
 
         $row = $this->em->getConnection()->fetchAssoc($query, $values);
 
@@ -435,18 +434,21 @@ class AuditReader
                 //print_r($targetClass->discriminatorMap);
                 if ($this->metadataFactory->isAudited($assoc['targetEntity'])) {
                     if ($this->loadAuditedEntities) {
+                        // Primary Key. Used for audit tables queries.
                         $pk = array();
+                        // Primary Field. Used when fallback to Doctrine finder.
+                        $pf = array();
 
                         if ($assoc['isOwningSide']) {
                             foreach ($assoc['targetToSourceKeyColumns'] as $foreign => $local) {
-                                $pk[$foreign] = $data[$columnMap[$local]];
+                                $pk[$foreign] = $pf[$foreign] = $data[$columnMap[$local]];
                             }
                         } else {
                             /** @var ClassMetadataInfo|ClassMetadata $otherEntityMeta */
-                            $otherEntityMeta = $this->em->getClassMetadata($assoc['targetEntity']);
+                            $otherEntityAssoc = $this->em->getClassMetadata($assoc['targetEntity'])->associationMappings[$assoc['mappedBy']];
 
-                            foreach ($otherEntityMeta->associationMappings[$assoc['mappedBy']]['targetToSourceKeyColumns'] as $local => $foreign) {
-                                $pk[$foreign] = $data[$class->getFieldName($local)];
+                            foreach ($otherEntityAssoc['targetToSourceKeyColumns'] as $local => $foreign) {
+                                $pk[$foreign] = $pf[$otherEntityAssoc['fieldName']] = $data[$class->getFieldName($local)];
                             }
                         }
 
@@ -461,6 +463,9 @@ class AuditReader
                                 $value = $this->find($targetClass->name, $pk, $revision, array('threatDeletionsAsExceptions' => true));
                             } catch (DeletedException $e) {
                                 $value = null;
+                            } catch (NoRevisionFoundException $e) {
+                                // The entity does not have any revision yet. So let's get the actual state of it.
+                                $value = $this->em->getRepository($targetClass->name)->findOneBy($pf);
                             }
 
                             $class->reflFields[$field]->setValue($entity, $value);
@@ -597,8 +602,8 @@ class AuditReader
                 $tableAlias = $class->isInheritanceTypeJoined() && $class->isInheritedField($field)	&& ! $class->isIdentifier($field)
                     ? 're' // root entity
                     : 'e';
-                $columnList .= ', ' . $tableAlias . '.' . $type->convertToPHPValueSQL(
-                        $this->quoteStrategy->getColumnName($field, $class, $this->platform), $this->platform
+                $columnList .= ', ' . $type->convertToPHPValueSQL(
+                        $tableAlias . '.' . $this->quoteStrategy->getColumnName($field, $class, $this->platform), $this->platform
                     ) . ' AS ' . $this->platform->quoteSingleIdentifier($field);
                 $columnMap[$field] = $this->platform->getSQLResultCasing($columnName);
             }
@@ -625,7 +630,7 @@ class AuditReader
                 $rootTableName = $this->getTableName($rootClass);
 
                 $joinSql = "INNER JOIN {$rootTableName} re ON";
-                $joinSql .= " re.rev = e.rev";
+                $joinSql .= " re.".$this->config->getRevisionFieldName()." = e.".$this->config->getRevisionFieldName();
                 foreach ($class->getIdentifierColumnNames() as $name) {
                     $joinSql .= " AND re.$name = e.$name";
                 }
@@ -879,7 +884,7 @@ class AuditReader
 
         $values = array_values($id);
 
-        $query = "SELECT " . implode(', ', $columnList) . " FROM " . $tableName . " e WHERE " . $whereSQL . " ORDER BY e.rev DESC";
+        $query = "SELECT " . implode(', ', $columnList) . " FROM " . $tableName . " e WHERE " . $whereSQL . " ORDER BY e.".$this->config->getRevisionFieldName()." DESC";
         $stmt = $this->em->getConnection()->executeQuery($query, $values);
 
         $result = array();

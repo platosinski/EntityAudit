@@ -29,6 +29,7 @@ use SimpleThings\EntityAudit\Tests\Fixtures\Issue\DuplicateRevisionFailureTestOw
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\DuplicateRevisionFailureTestPrimaryOwner;
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\DuplicateRevisionFailureTestSecondaryOwner;
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\EscapedColumnsEntity;
+use SimpleThings\EntityAudit\Tests\Fixtures\Issue\ConvertToPHPEntity;
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue111Entity;
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue156Contact;
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue156ContactTelephoneNumber;
@@ -36,6 +37,7 @@ use SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue156Client;
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue196Entity;
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue31Reve;
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue31User;
+use SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue318User;
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue87Organization;
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue87Project;
 use SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue87ProjectComment;
@@ -64,9 +66,11 @@ class IssueTest extends BaseTest
         'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue156Contact',
         'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue156ContactTelephoneNumber',
         'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue156Client',
-        'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue196Entity',
         'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue198Car',
         'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue198Owner',
+        'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue196Entity',
+        'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue318User',
+        'SimpleThings\EntityAudit\Tests\Fixtures\Issue\ConvertToPHPEntity',
     );
 
     protected $auditedEntities = array(
@@ -90,10 +94,13 @@ class IssueTest extends BaseTest
         'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue196Entity',
         'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue198Car',
         'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue198Owner',
+        'SimpleThings\EntityAudit\Tests\Fixtures\Issue\Issue318User',
+        'SimpleThings\EntityAudit\Tests\Fixtures\Issue\ConvertToPHPEntity',
     );
 
     protected $customTypes = array(
         'issue196type' => 'SimpleThings\EntityAudit\Tests\Types\Issue196Type',
+        'upper' => 'SimpleThings\EntityAudit\Tests\Types\ConvertToPHPType',
     );
 
     public function testIssue31()
@@ -273,16 +280,16 @@ class IssueTest extends BaseTest
             'Current revision of audited entity is not equivalent to persisted entity:'
         );
     }
-    
+
     public function testIssue198()
     {
         $owner = new Issue198Owner();
         $car = new Issue198Car();
-        
+
         $this->em->persist($owner);
         $this->em->persist($car);
         $this->em->flush();
-        
+
         $owner->addCar($car);
 
         $this->em->persist($owner);
@@ -290,11 +297,52 @@ class IssueTest extends BaseTest
         $this->em->flush();
 
         $auditReader = $this->auditManager->createAuditReader($this->em);
-        
+
         $car1 = $auditReader->find(get_class($car), $car->getId(), 1);
         $this->assertNull($car1->getOwner());
-        
+
         $car2 = $auditReader->find(get_class($car), $car->getId(), 2);
         $this->assertEquals($car2->getOwner()->getId(), $owner->getId());
+    }
+
+    public function testConvertToPHP()
+    {
+        $entity = new ConvertToPHPEntity();
+        $entity->setSqlConversionField('TEST CONVERT TO PHP');
+        $this->em->persist($entity);
+        $this->em->flush();
+        $this->em->clear();
+
+        $persistedEntity = $this->em->find(get_class($entity), $entity->getId());
+
+        $auditReader = $this->auditManager->createAuditReader($this->em);
+        $currentRevision = $auditReader->getCurrentRevision(get_class($entity), $entity->getId());
+        $currentRevisionEntity = $auditReader->find(get_class($entity), $entity->getId(), $currentRevision);
+
+        $this->assertEquals(
+            $persistedEntity,
+            $currentRevisionEntity,
+            'Current revision of audited entity is not equivalent to persisted entity:'
+        );
+    }
+
+    public function testIssue318()
+    {
+        $user = new Issue318User();
+        $user->setAlias('alias');
+        $this->em->persist($user);
+        $this->em->flush();
+        $userMetadata = $this->em->getClassMetadata(get_class($user));
+        $classes = array($userMetadata);
+        $schema = $this->getSchemaTool()->getSchemaFromMetadata($classes);
+        $schemaName = $schema->getName();
+        $config = $this->getAuditManager()->getConfiguration();
+        $entityTableUser = $schema->getTable(sprintf('%s.issue318user', $schemaName));
+        $revisionsTableUser = $schema->getTable(sprintf('%s.%sissue318user%s', $schemaName, $config->getTablePrefix(), $config->getTableSuffix()));
+        $userNotNullColumnName = 'alias';
+        $userIdColumnName = 'id';
+
+        $this->assertFalse($revisionsTableUser->getColumn($userNotNullColumnName)->getNotnull());
+        $this->assertFalse($revisionsTableUser->getColumn($userIdColumnName)->getAutoincrement());
     }
 }

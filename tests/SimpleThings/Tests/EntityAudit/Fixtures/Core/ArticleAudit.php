@@ -38,6 +38,11 @@ class ArticleAudit
         return $this->id;
     }
 
+    public function getAuthor()
+    {
+        return $this->author;
+    }
+
     public function setText($text)
     {
         $this->text = $text;

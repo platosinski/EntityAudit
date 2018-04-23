@@ -146,13 +146,13 @@ class AuditConfiguration
     }
 
     /**
-     * @return string|null
+     * @return string
      */
     public function getCurrentUsername()
     {
         $callable = $this->usernameCallable;
 
-        return $callable ? $callable() : null;
+        return (string) ($callable ? $callable() : "");
     }
 
     public function setUsernameCallable($usernameCallable)

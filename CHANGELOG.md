@@ -2,6 +2,22 @@
 
 ### upcoming (2017/MM/DD)
 
+### v1.0.5 (2017/05/26)
+- [#281](https://github.com/simplethings/EntityAuditBundle/pull/281) Removal of hardcoded revision field name (@c0ntax)
+
+### v1.0.4 (2017/04/19)
+- [#279](https://github.com/simplethings/EntityAuditBundle/issues/279) Fix versioning
+
+### v1.0.3 (2017/04/19)
+- [#275](https://github.com/simplethings/EntityAuditBundle/pull/275) Fix auditing of entities with fields that require php conversion (@TheRatG)
+
+### v1.0.2 (2017/01/30)
+- [#258](https://github.com/simplethings/EntityAuditBundle/issues/258) global_ignore_columns doesn't work
+
+### v1.0.1 (2017/01/13)
+- [#250](https://github.com/simplethings/EntityAudit/pull/250) Fix OneToOne reverse relation Doctrine fallback query (@Soullivaneuh)
+- [#227](https://github.com/simplethings/EntityAudit/pull/227) Fallback to native entity if no revision found for properties (@Soullivaneuh)
+
 ### v1.0.0 (2017/01/06)
 - [#218](https://github.com/simplethings/EntityAudit/pull/218) Failing one to one bidirectional fix (@peschee)
 - [#231](https://github.com/simplethings/EntityAudit/pull/231) Enable join column to be an id (@oconnedk)
